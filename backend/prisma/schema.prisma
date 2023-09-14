@@ -1,0 +1,152 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String  @id @default(uuid())
+  username              String  @unique
+  email                 String  @unique
+  profilePicture        String? @default("/src/assets/morpheus.png")
+  hash                  String
+  hashedRt              String?
+  isOnline              Boolean @default(false)
+  isPlaying             Boolean @default(false)
+  Wins                  Int     @default(0)
+  Losses                Int     @default(0)
+  Played                Int     @default(0)
+  winrate               Int     @default(0)
+  is2faEnabled          Boolean @default(false)
+  emailVerificationCode String?
+
+  channels      ChannelMembership[] //sono membro di questi canali
+  sentMessages  Message[]           @relation("Message_Sender") // ho mandato questi messaggi
+
+  sentFriendRequests     Friendship[] @relation("Friendship_Sender")
+  receivedFriendRequests Friendship[] @relation("Friendship_Receiver")
+
+  blockedUsers   BlockedUser[] @relation("Blocker_Relation")
+  usersBlockedBy BlockedUser[] @relation("Blocked_Relation")
+
+  matchHistory Int[] // array di id delle partite giocate
+
+	receivedGameRequests Gameinvite[]        @relation("game_Receiver") //*nizz
+  sentGameRequests     Gameinvite[]        @relation("game_Sender") //*nizz
+
+  @@map("users")
+}
+
+model matchHistory {
+  id      Int       @id @default(autoincrement())
+  User1Id String
+  User2Id String
+  winner  String
+  score   String
+  mode    MatchMode
+  createdAt DateTime @default(now())
+}
+
+// ho fatto solo un tipo CHANNEL diviso in DIRECT: una chat privata tra 2, oppure PRIVATE: un canale vero privato, oppure PUBLIC: un canale pubblico con tanti membri
+model Channel {
+  id        String                 @id @default(uuid()) @unique
+  type      ChannelType            // PRIVATE o PUBLIC o DIRECT
+  name      String?   @unique             // se sono GROUP ho un nome del canale
+  password  String?
+  members   ChannelMembership[]    // membri del canale
+  messages  Message[]
+  notInRoom String[]               @default([]) // utenti che non sono in questo canale
+}
+
+model ChannelMembership {
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  channelId   String
+  channel     Channel     @relation(fields: [channelId], references: [id])
+  role        UserRole    // ruolo utente: OWNER, ADMIN o MEMBER
+  status      UserStatus? // stato dell utente nel canale: (ACTIVE, BANNED, MUTED)
+  muteEndTime DateTime?   // se mutato quanto tempo dura il mute
+  notRead	  Int         @default(0) // numero di messaggi non letti
+
+  @@id([userId, channelId])
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id])
+  senderId  String
+  sender    User     @relation("Message_Sender", fields: [senderId], references: [id])
+  time      DateTime @default(now())
+  content   String
+  read      Boolean  @default(false)
+}
+
+enum ChannelType {
+  PUBLIC
+  PRIVATE
+  DIRECT
+}
+
+enum UserRole {
+  MEMBER
+  ADMIN
+  OWNER
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+  MUTED
+}
+
+enum MatchMode {
+  CLASSIC
+  POWERUP
+}
+
+model Friendship {
+  id         String           @id @default(uuid())
+  senderId   String
+  sender     User             @relation("Friendship_Sender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User             @relation("Friendship_Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  status     FriendshipStatus
+
+  @@unique([senderId, receiverId])
+}
+
+model Gameinvite {
+  id         String           @id @default(uuid())
+  senderId   String
+  sender     User             @relation("game_Sender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User             @relation("game_Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  status     GameinviteStatus
+
+  @@unique([senderId, receiverId])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+enum GameinviteStatus {
+  PENDING
+  ACCEPTED
+  OUTDATED
+}
+
+model BlockedUser {
+  blockerId String
+  blocker   User   @relation("Blocker_Relation", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User   @relation("Blocked_Relation", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+}
