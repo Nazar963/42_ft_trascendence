@@ -1,5 +1,6 @@
 import http from '@/http';
 import { type ISignedIn } from '@/models/ISignedIn';
+import { useAuthStore } from '@/stores/auth';
 
 class AuthService {
   // local
@@ -37,12 +38,61 @@ class AuthService {
     return http.post('/user/change2fa');
   }
 
-  online() {
-    return http.post('/user/online');
+  // Track when the last online status update was called to prevent too many calls
+  private lastOnlineUpdate = 0;
+  private onlineUpdateInProgress = false;
+  private isOnline = false;
+
+  async online() {
+    // If already online or an update is in progress, skip this call
+    if (this.isOnline || this.onlineUpdateInProgress) {
+      return;
+    }
+
+    // Implement a 5-second cooldown between status updates
+    const now = Date.now();
+    if (now - this.lastOnlineUpdate < 5000) {
+      return;
+    }
+
+    this.onlineUpdateInProgress = true;
+    this.lastOnlineUpdate = now;
+
+    try {
+      // Check if the user is authenticated (has a token) via store
+      const authStore = useAuthStore();
+      if (!authStore.token) {
+        console.log('User not authenticated, skipping online status update');
+        return;
+      }
+
+      await http.post('/user/online');
+      this.isOnline = true;
+    } catch (error) {
+      console.error('Error setting online status:', error);
+      // Don't throw the error to prevent cascading failures
+    } finally {
+      this.onlineUpdateInProgress = false;
+    }
   }
 
-  offline() {
-    return http.post('/user/offline');
+  async offline() {
+    if (!this.isOnline) {
+      return;
+    }
+    
+    try {
+      const authStore = useAuthStore();
+      if (!authStore.token) {
+        return;
+      }
+      
+      await http.post('/user/offline');
+      this.isOnline = false;
+    } catch (error) {
+      console.error('Error setting offline status:', error);
+      // Don't throw the error here as this might be called during page unload
+    }
   }
 
   /** Get a new access_token. Must provide the refresh token */

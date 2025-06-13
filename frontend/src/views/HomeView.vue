@@ -4,12 +4,12 @@ import { onMounted, ref } from 'vue';
 import AuthComponent from '@/components/auth/AuthComponent.vue';
 import { useAuthStore } from '@/stores/auth';
 import CardPong from '@/components/CardPong.vue';
-import AuthService from '@/services/AuthService';
 const authStore = ref(useAuthStore());
 
-// se serve async onMounted( async ()=> { 
+// Only call online() from App.vue to avoid duplicate calls
+// This prevents multiple components from setting online status
 onMounted(() => {
-   AuthService.online();
+  // No need to call AuthService.online() here since App.vue handles it
 });
 
 </script>

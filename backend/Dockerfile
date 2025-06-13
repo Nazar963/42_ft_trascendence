@@ -4,11 +4,18 @@ FROM node:alpine
 ARG DATABASE_URL
 ENV DATABASE_URL $DATABASE_URL
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
 
 COPY . .
 
-RUN npm ci
+# Generate Prisma client
+RUN npx prisma generate
 
 EXPOSE 3000
 

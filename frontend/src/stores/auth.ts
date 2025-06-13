@@ -30,6 +30,16 @@ export const useAuthStore = defineStore('auth', {
     refreshBearer(): string {
       return this.refreshToken === '' ? '' : 'Bearer ' + this.refreshToken;
     },
+    currentUserId(): string {
+      if (this.token === '') return '';
+      try {
+        const tokData = api.decodePayload(this.token);
+        return tokData.id || '';
+      } catch (error) {
+        console.error('Error decoding token:', error);
+        return '';
+      }
+    },
   },
   actions: {
     // local

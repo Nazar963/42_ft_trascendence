@@ -15,17 +15,25 @@ export const useFriendStore = defineStore('friend', {
 
   actions: {
     async initStore(userId: string | null) {
+      // Only initialize if we have a valid userId and user is authenticated
+      if (!userId) {
+        console.log('No userId provided to friend store');
+        return;
+      }
+      
       try {
-
         const friend = await FriendService.getFriendList();
-		const pending = await FriendService.getFriendRequest(userId!);
-		const sent = await FriendService.getFriendSent(userId!);
-		const blocked = await FriendService.getBlockedRequest();
+        const pending = await FriendService.getFriendRequest(userId);
+        const sent = await FriendService.getFriendSent(userId);
+        const blocked = await FriendService.getBlockedRequest();
 
-		this.setStore(friend, pending, sent, blocked);
-	} catch (err) {
+        this.setStore(friend, pending, sent, blocked);
+      } catch (err) {
         const e = err as AxiosError<IError>;
-        if (axios.isAxiosError(e)) return e.response?.data;
+        if (axios.isAxiosError(e)) {
+          console.log('Failed to initialize friend store:', e.response?.data);
+          return e.response?.data;
+        }
       }
     },
     setStore(friend: IFriend[], pending: IFriend[], sent: IFriend[], blocked: IFriend[]) {

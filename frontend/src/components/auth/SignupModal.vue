@@ -7,19 +7,19 @@
         <form method="dialog" class="modal-box">
           <Form @submit="onSubmit" :validation-schema="schema" class=" shadow-md rounded px-8 pt-6 pb-8 mb-4 ">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="email">Your Email</label>
-            <Field v-model="credentials.email" class="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline" id="email_addr_signup" name="email_addr" type="emailSig" />
-            <ErrorMessage name="email_addr_signup" />
+            <Field v-model="credentials.email" class="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline" id="email" name="email" type="email" />
+            <ErrorMessage name="email" />
         
-            <label class="block text-gray-700 text-sm font-bold mb-2" for="username_signup">Your Username</label>
-            <Field v-model="credentials.username" class="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline" id="username_signup" name="username" type="username" />
-            <ErrorMessage name="username_signup" />
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="username">Your Username</label>
+            <Field v-model="credentials.username" class="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline" id="username" name="username" type="text" />
+            <ErrorMessage name="username" />
 
-            <label class="block text-gray-700 text-sm font-bold mb-2" for="password_signin">Your Password</label>
-            <Field v-model="credentials.password" class="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline" id="password_signup" name="acc_pazzword" type="password" />
-            <ErrorMessage name="acc_pazzword" />
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="password">Your Password</label>
+            <Field v-model="credentials.password" class="shadow appearance-none border rounded w-full py-2 px-3 text-white-700 leading-tight focus:outline-none focus:shadow-outline" id="password" name="password" type="password" />
+            <ErrorMessage name="password" />
             <div class="flex items-center justify-between">
-              <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" @click="onSubmit" >
-                Sign up
+              <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit" :disabled="isLoading">
+                {{ isLoading ? 'Signing up...' : 'Sign up' }}
               </button>
               <a class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800" href="#">
                 Sei stronzo?
@@ -45,6 +45,7 @@ import * as yup from 'yup';
 
 // Router, authStore, credentials
 const auth = ref(useAuthStore())
+const isLoading = ref(false)
 const credentials = reactive({
   email:"",
   password:"",
@@ -53,18 +54,39 @@ const credentials = reactive({
 
 //Validation schema
 const schema = yup.object().shape({
-  email_addr: yup.string().email().required().label('Email Address'),
-  acc_pazzword: yup.string().min(5).required().label('Your Password'),
-  username: yup.string().min(5).required().label('Your Username'),
+  email: yup.string().email().required().label('Email Address'),
+  password: yup.string().min(5).required().label('Password'),
+  username: yup.string().min(3).required().label('Username'),
 });
 
 // Submit function
 async function onSubmit() {
-  const e = await auth.value.signUpLocal(credentials.email, credentials.username, credentials.password);
-  if (e)
-  {
-    // alert(e.message)
+  // Prevent double submission
+  if (isLoading.value) {
+    console.log('Submission already in progress, ignoring...');
     return;
+  }
+
+  try {
+    isLoading.value = true;
+    
+    console.log('Submitting signup form with:', {
+      email: credentials.email,
+      username: credentials.username,
+      password: '****' // Don't log actual password
+    });
+    
+    const e = await auth.value.signUpLocal(credentials.email, credentials.username, credentials.password);
+    if (e) {
+      console.error("Signup error:", e);
+      alert(e.message || "Registration failed. Please try again.");
+      return;
+    }
+  } catch (error) {
+    console.error("Unexpected error during signup:", error);
+    alert("An unexpected error occurred. Please try again later.");
+  } finally {
+    isLoading.value = false;
   }
 }
 

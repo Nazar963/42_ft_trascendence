@@ -23,18 +23,37 @@ export const useGameStore = defineStore('game', () => {
 	const setRenderer = (val:boolean) => { renderer.value = val }
 	const updateInvite = async () => {
 		const userId = useCurrentUserStore().userId;
-		accepted.value = await GameInviteService.getAcceptedGameInvite();
-		waiting.value = await GameInviteService.getWaitingGameInvite(userId!);
-		thinking.value = await GameInviteService.getThinkingGameInvite(userId!);
-	}
-	const initStore = async (userId: string | null) => {
+		if (!userId) {
+			console.log('No userId available for game invite update');
+			return;
+		}
+		
 		try {
 			accepted.value = await GameInviteService.getAcceptedGameInvite();
-			waiting.value = await GameInviteService.getWaitingGameInvite(userId!);
-			thinking.value = await GameInviteService.getThinkingGameInvite(userId!);
+			waiting.value = await GameInviteService.getWaitingGameInvite(userId);
+			thinking.value = await GameInviteService.getThinkingGameInvite(userId);
+		} catch (error) {
+			console.log('Failed to update game invites:', error);
+		}
+	}
+	
+	const initStore = async (userId: string | null) => {
+		// Only initialize if we have a valid userId
+		if (!userId) {
+			console.log('No userId provided to game store');
+			return;
+		}
+		
+		try {
+			accepted.value = await GameInviteService.getAcceptedGameInvite();
+			waiting.value = await GameInviteService.getWaitingGameInvite(userId);
+			thinking.value = await GameInviteService.getThinkingGameInvite(userId);
 		} catch (err) {
 			const e = err as AxiosError<IError>;
-			if (axios.isAxiosError(e)) return e.response?.data;
+			if (axios.isAxiosError(e)) {
+				console.log('Failed to initialize game store:', e.response?.data);
+				return e.response?.data;
+			}
 		}
 	}
 

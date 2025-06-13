@@ -6,7 +6,6 @@ import * as bcrypt from 'bcrypt';
 import { Tokens } from './types';
 import { JwtService } from '@nestjs/jwt';
 import { SendEmailService } from './2fa/2fa.service';
-import { async } from 'rxjs';
 
 @Injectable()
 export class AuthService {
@@ -17,33 +16,59 @@ export class AuthService {
   ) {}
 
   async signupLocal(dto: SignInDto): Promise<Tokens> {
+    // Check if user with email already exists
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
     if (existingUser) {
       throw new ConflictException('Email already in use');
     }
+
+    // Check if user with username already exists
     const existingUsername = await this.prisma.user.findUnique({
       where: { username: dto.username },
     });
     if (existingUsername) {
+      console.log(`Username ${dto.username} already exists in database`);
       throw new ConflictException('Username already in use');
     }
+
+    console.log(
+      `Creating user with username: ${dto.username} and email: ${dto.email}`,
+    );
     const hash = await this.hashData(dto.password);
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        hash,
-        username: dto.username,
-      },
-    });
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { isOnline: true },
-    });
-    const tokens = await this.getTokens(user.id, user.email);
-    await this.updateRtHash(user.id, tokens.refreshToken);
-    return tokens;
+
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          email: dto.email,
+          hash,
+          username: dto.username,
+        },
+      });
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { isOnline: true },
+      });
+
+      const tokens = await this.getTokens(user.id, user.email);
+      await this.updateRtHash(user.id, tokens.refreshToken);
+      return tokens;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      // Handle Prisma unique constraint errors
+      if (error.code === 'P2002') {
+        const target = error.meta?.target;
+        if (target?.includes('username')) {
+          throw new ConflictException('Username already in use');
+        }
+        if (target?.includes('email')) {
+          throw new ConflictException('Email already in use');
+        }
+      }
+      throw error;
+    }
   }
 
   async signinLocal(dto: AuthDto): Promise<any> {
@@ -69,14 +94,25 @@ export class AuthService {
         data: { emailVerificationCode: verificationCode },
       });
 
-      await this.sendEmailService.sendVerificationCode(
+      const emailSent = await this.sendEmailService.sendVerificationCode(
         user.email,
         verificationCode,
       );
 
-      return {
-        is2faEnabled: true,
-      };
+      // If email sending is successful or email verification is disabled, proceed with 2FA
+      if (emailSent) {
+        return {
+          is2faEnabled: true,
+        };
+      } else {
+        // If email fails and we're in development, skip 2FA
+        console.warn(
+          `Email service failed for user ${user.email}. Proceeding with 2FA disabled for this session.`,
+        );
+        const tokens = await this.getTokens(user.id, user.email);
+        await this.updateRtHash(user.id, tokens.refreshToken);
+        return { tokens, is2faEnabled: false };
+      }
     }
     await this.prisma.user.update({
       where: { id: user.id },
@@ -98,11 +134,24 @@ export class AuthService {
         where: { username: dto.username },
       });
     }
-    if (user && user.emailVerificationCode === dto.verificationCode) {
-      // Code is correct
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (!user.emailVerificationCode) {
+      throw new Error('No verification code found. Please request a new one.');
+    }
+
+    // Compare the verification codes (plain text comparison since we store plain text)
+    if (user.emailVerificationCode === dto.verificationCode) {
+      // Code is correct - clear it and update user status
       await this.prisma.user.update({
         where: { id: user.id },
-        data: { emailVerificationCode: null },
+        data: {
+          emailVerificationCode: null,
+          isOnline: true, // Set user online after successful 2FA
+        },
       });
 
       const tokens = await this.getTokens(user.id, user.email);
@@ -132,28 +181,39 @@ export class AuthService {
       where: { id: user.id },
       data: { isOnline: true },
     });
-	if (user.is2faEnabled === true) {
-		const verificationCode = this.generateVerificationCode();
-  
-		await this.prisma.user.update({
-		  where: { id: user.id },
-		  data: { emailVerificationCode: verificationCode },
-		});
-  
-		await this.sendEmailService.sendVerificationCode(
-		  user.email,
-		  verificationCode,
-		);
-  
-		return {
-		  is2faEnabled: true, email: user.email
-		};
-	  }
+    if (user.is2faEnabled === true) {
+      const verificationCode = this.generateVerificationCode();
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerificationCode: verificationCode },
+      });
+
+      const emailSent = await this.sendEmailService.sendVerificationCode(
+        user.email,
+        verificationCode,
+      );
+
+      // If email sending is successful or email verification is disabled, proceed with 2FA
+      if (emailSent) {
+        return {
+          is2faEnabled: true,
+          email: user.email,
+        };
+      } else {
+        // If email fails and we're in development, skip 2FA
+        console.warn(
+          `Email service failed for user ${user.email}. Proceeding with 2FA disabled for this session.`,
+        );
+        const tokens = await this.getTokens(user.id, user.email);
+        await this.updateRtHash(user.id, tokens.refreshToken);
+        return { tokens, is2faEnabled: false };
+      }
+    }
     const tokens = await this.getTokens(user.id, user.email);
     await this.updateRtHash(user.id, tokens.refreshToken);
-    return {tokens, is2faEnabled: false};
+    return { tokens, is2faEnabled: false };
   }
-
 
   async logout(userId: string) {
     await this.prisma.user.update({

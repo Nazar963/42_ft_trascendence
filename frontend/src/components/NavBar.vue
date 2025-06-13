@@ -68,14 +68,19 @@
             </div>
           </label>
           <ul tabindex="0" class="menu menu-sm dropdown-content mt-1 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-            <li><router-link
-              :to="{
-                name: 'profile',
-                params: { userid: userStore.userId },
-              }"
-              class="dropdown-item"
-              >{{userStore.username}}</router-link
-            ></li>
+            <li v-if="userStore.userId || auth.currentUserId">
+              <router-link
+                :to="{
+                  name: 'profile',
+                  params: { userid: userStore.userId || auth.currentUserId },
+                }"
+                class="dropdown-item"
+                >{{userStore.username || 'Profile'}}</router-link
+              >
+            </li>
+            <li v-else>
+              <span class="dropdown-item text-gray-500">Loading profile...</span>
+            </li>
             <li class="dropdown-item">
               <button>
                 TwoFa
@@ -199,7 +204,7 @@
 
 <script setup lang="ts">
 
-import { ref, watch, watchEffect } from 'vue'
+import { ref, watchEffect } from 'vue'
 import { useAuthStore } from '@/stores/auth';
 import { useCurrentUserStore } from '@/stores/currentUser';
 import { useRouter } from 'vue-router';

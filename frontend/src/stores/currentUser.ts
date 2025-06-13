@@ -32,13 +32,23 @@ export const useCurrentUserStore = defineStore('currentUser', {
         this.userId = userId;
       if (email)
         this.email = email;
+        
+      // Only proceed if we have a valid userId
+      if (!this.userId) {
+        console.log('No userId available for current user store initialization');
+        return;
+      }
+        
       try {
         const user = await UserService.getUserById(this.userId);
-        this.setStore(user, user.profilePicture/*, { friends, pendings, sent }*/);
-		this.friendStore.initStore(this.userId);
-		this.gameInviteStore.initStore(this.userId);
+        this.setStore(user, user.profilePicture);
+        
+        // Initialize sub-stores only if main user data was loaded successfully
+        await this.friendStore.initStore(this.userId);
+        await this.gameInviteStore.initStore(this.userId);
       } catch (err) {
         const e = err as AxiosError<IError>;
+        console.log('Failed to initialize current user store:', e.response?.data);
         if (axios.isAxiosError(e)) return e.response?.data;
       }
     },

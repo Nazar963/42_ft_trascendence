@@ -11,6 +11,9 @@ services:
         - DATABASE_URL=postgres://${DB_USERNAME}:${DB_PASSWORD}@database:${DB_PASSWORD}/${DB_DATABASE}
     container_name: dmnlg_backend
     restart: unless-stopped
+    ports:
+      - "3000:3000"
+      - "5555:5555"
     depends_on:
       - 'database'
     networks:
