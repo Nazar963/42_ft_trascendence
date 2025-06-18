@@ -1,7 +1,6 @@
 # Transcendence: The Ultimate 42 Final Project 🌐🚀
 
 [![42 School](https://img.shields.io/badge/42-School-blue)](https://42firenze.it/)
-[![GitHub license](https://img.shields.io/github/license/Nazar963/42_ft_trascendence)](https://github.com/Nazar963/42_ft_trascendence/blob/main/LICENSE)
 [![NestJS](https://img.shields.io/badge/NestJS-v10-red)](https://nestjs.com/)
 [![Vue](https://img.shields.io/badge/Vue.js-v3-brightgreen)](https://vuejs.org/)
 
