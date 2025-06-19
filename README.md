@@ -18,7 +18,6 @@ A full-stack web application featuring real-time multiplayer Pong, social featur
 -   [Installation](#installation)
 -   [Usage](#usage)
 -   [Development](#development)
--   [Contributing](#contributing)
 -   [License](#license)
 
 ## Project Overview
@@ -248,36 +247,32 @@ MAIL_PASSWORD=your app password
 EMAIL_VERIFICATION_ENABLED=true
 ```
 
-## Contributing
-
-Feel free to submit issues or pull requests if you have suggestions for improving the application or adding more features cases.
-
 ### Coding Standards
-
 -   Follow NestJS best practices
 -   Adhere to Vue composition API style
 -   Use TypeScript strict mode
 
-## License
+## 🤝 Contributing
+Feel free to submit issues or pull requests if you have suggestions for improving the application or adding more features.
 
+## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 📧 Contact
 For questions or feedback, please open an issue in the repository.
-
 
 ## ⭐ Star this repository if you found it helpful!
 [![GitHub stars](https://img.shields.io/github/stars/Nazar963/42_ft_trascendence?style=social)](https://github.com/Nazar963/42_ft_trascendence/stargazers)
 
 ---
 
-🚀 **Transcend the Ordinary!**  
+🚀 *"Transcend the Ordinary!."*  
 [![42 School](https://img.shields.io/badge/42-profile-blue)](https://profile-v3.intra.42.fr/users/naal-jen)
 [![GitHub Profile](https://img.shields.io/badge/GitHub-Nazar963-lightgrey)](https://github.com/Nazar963)
 [![GitHub Follow](https://img.shields.io/github/followers/Nazar963?style=social)](https://github.com/Nazar963)
 
 ---
-
+## 🍀 Goodluck:
 Good luck with your ft_trascendence project at 42! 🚀
 
 ---
